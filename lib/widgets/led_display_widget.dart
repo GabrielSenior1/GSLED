@@ -132,19 +132,24 @@ class _LedDisplayWidgetState extends State<LedDisplayWidget>
 
   /// Font size calculation that respects the user slider in BOTH modes
   double _calculateEffectiveFontSize(double availableHeight) {
+    if (availableHeight <= 0) return 30.0;
     final double userSize = widget.config.fontSize; // 36..140
 
     if (widget.isFullScreen) {
       // In fullscreen: map slider 36..140 to 40%..90% of screen height
       final double t = ((userSize - 36.0) / 104.0).clamp(0.0, 1.0);
       final double fraction = 0.40 + (t * 0.50);
-      return (availableHeight * fraction).clamp(30.0, availableHeight * 0.92);
+      final double calculated = availableHeight * fraction;
+      final double maxAllowed = math.max(20.0, availableHeight * 0.92);
+      return calculated.clamp(16.0, maxAllowed);
     } else {
       // Preview: scale proportionally. Preview ~110px tall.
       // Map slider 36..140 to 35%..80% of available height
       final double t = ((userSize - 36.0) / 104.0).clamp(0.0, 1.0);
       final double fraction = 0.35 + (t * 0.45);
-      return (availableHeight * fraction).clamp(14.0, availableHeight * 0.85);
+      final double calculated = availableHeight * fraction;
+      final double maxAllowed = math.max(14.0, availableHeight * 0.85);
+      return calculated.clamp(10.0, maxAllowed);
     }
   }
 
@@ -286,13 +291,13 @@ class _LedDisplayWidgetState extends State<LedDisplayWidget>
         final textW = _cachedTextWidth > 0 ? _cachedTextWidth : 200.0;
         final textH = _cachedTextHeight > 0 ? _cachedTextHeight : 60.0;
 
-        // Calculate translation offset based on direction & linear scroll offset
+        TextStyle finalTextStyle = textStyle;
         Offset offset;
 
         switch (widget.config.direction) {
           case ScrollDirection.rightToLeft:
             // Text starts fully off-screen right, exits fully off-screen left
-            final totalDistance = screenWidth + textW;
+            final totalDistance = math.max(1.0, screenWidth + textW);
             final currentProgress = _scrollOffset % totalDistance;
             final currentX = screenWidth - currentProgress;
             final centerY = (screenHeight - textH) / 2.0;
@@ -300,7 +305,7 @@ class _LedDisplayWidgetState extends State<LedDisplayWidget>
             break;
 
           case ScrollDirection.leftToRight:
-            final totalDistance = screenWidth + textW;
+            final totalDistance = math.max(1.0, screenWidth + textW);
             final currentProgress = _scrollOffset % totalDistance;
             final currentX = -textW + currentProgress;
             final centerY = (screenHeight - textH) / 2.0;
@@ -308,7 +313,7 @@ class _LedDisplayWidgetState extends State<LedDisplayWidget>
             break;
 
           case ScrollDirection.topToBottom:
-            final totalDistance = screenHeight + textH;
+            final totalDistance = math.max(1.0, screenHeight + textH);
             final currentProgress = _scrollOffset % totalDistance;
             final currentY = -textH + currentProgress;
             final centerX = (screenWidth - textW) / 2.0;
@@ -316,7 +321,7 @@ class _LedDisplayWidgetState extends State<LedDisplayWidget>
             break;
 
           case ScrollDirection.bottomToTop:
-            final totalDistance = screenHeight + textH;
+            final totalDistance = math.max(1.0, screenHeight + textH);
             final currentProgress = _scrollOffset % totalDistance;
             final currentY = screenHeight - currentProgress;
             final centerX = (screenWidth - textW) / 2.0;
@@ -342,59 +347,18 @@ class _LedDisplayWidgetState extends State<LedDisplayWidget>
               )..layout();
               fitTextW = painter.width;
               fitTextH = painter.height;
+              finalTextStyle = fitStyle;
             }
             offset = Offset(
               (screenWidth - fitTextW) / 2.0,
               (screenHeight - fitTextH) / 2.0,
             );
-            // For static, rebuild with fitted style if needed
-            if (fitFontSize != effectiveFontSize) {
-              final fitStyle = _buildTextStyle(fitFontSize);
-              Widget movingText = Transform.translate(
-                offset: offset,
-                child: _buildRenderedTextWithStyle(fitStyle),
-              );
-              if (widget.config.isMirrored) {
-                movingText = Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.rotationY(math.pi),
-                  child: movingText,
-                );
-              }
-              return GestureDetector(
-                onTap: widget.onTap,
-                onDoubleTap: widget.onDoubleTap,
-                behavior: HitTestBehavior.opaque,
-                child: ClipRect(
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    fit: StackFit.expand,
-                    children: [
-                      RepaintBoundary(
-                        child: CustomPaint(
-                          painter: LedBackgroundBoardPainter(
-                            backgroundColor: widget.config.backgroundColor,
-                            unlitDotColor: widget.config.unlitDotColor,
-                            style: widget.config.matrixStyle,
-                            dotPitch: widget.isFullScreen ? 14.0 : 8.0,
-                          ),
-                        ),
-                      ),
-                      Opacity(
-                        opacity: _blinkOpacity,
-                        child: movingText,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
             break;
         }
 
         Widget movingText = Transform.translate(
           offset: offset,
-          child: _buildRenderedText(textStyle),
+          child: _buildRenderedText(finalTextStyle),
         );
 
         if (widget.config.isMirrored) {
@@ -440,39 +404,5 @@ class _LedDisplayWidgetState extends State<LedDisplayWidget>
         );
       },
     );
-  }
-
-  Widget _buildRenderedTextWithStyle(TextStyle style) {
-    Widget textWidget = Text(
-      widget.config.text.isEmpty ? ' ' : widget.config.text,
-      style: style,
-      maxLines: 1,
-      softWrap: false,
-      overflow: TextOverflow.visible,
-    );
-
-    if (widget.config.isRainbow) {
-      textWidget = ShaderMask(
-        shaderCallback: (bounds) {
-          return LinearGradient(
-            colors: const [
-              Color(0xFFFF0055),
-              Color(0xFFFF7700),
-              Color(0xFFFFEE00),
-              Color(0xFF00FF66),
-              Color(0xFF00EEFF),
-              Color(0xFF8800FF),
-              Color(0xFFFF0055),
-            ],
-            stops: const [0.0, 0.17, 0.33, 0.5, 0.67, 0.83, 1.0],
-            transform: GradientRotation(_rainbowPhase * 2 * math.pi),
-          ).createShader(bounds);
-        },
-        blendMode: BlendMode.srcIn,
-        child: textWidget,
-      );
-    }
-
-    return textWidget;
   }
 }

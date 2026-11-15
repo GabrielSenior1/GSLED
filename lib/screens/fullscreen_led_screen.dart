@@ -37,7 +37,9 @@ class _FullscreenLedScreenState extends State<FullscreenLedScreen> {
 
   void _setupEnvironment() {
     // 1. Keep display awake
-    WakelockPlus.enable();
+    try {
+      WakelockPlus.enable();
+    } catch (_) {}
 
     // 2. Immersive full screen mode (hide top notch, status bar, and navigation bar)
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
@@ -68,7 +70,9 @@ class _FullscreenLedScreenState extends State<FullscreenLedScreen> {
   }
 
   void _restoreEnvironment() {
-    WakelockPlus.disable();
+    try {
+      WakelockPlus.disable();
+    } catch (_) {}
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -164,14 +168,14 @@ class _FullscreenLedScreenState extends State<FullscreenLedScreen> {
               ),
 
             // Floating Controls HUD
-            IgnorePointer(
-              ignoring: !_showHud,
-              child: AnimatedPositioned(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeInOut,
-                bottom: _showHud ? 20 : -140,
-                left: 20,
-                right: 20,
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              bottom: _showHud ? 20 : -140,
+              left: 20,
+              right: 20,
+              child: IgnorePointer(
+                ignoring: !_showHud,
                 child: AnimatedOpacity(
                   opacity: _showHud ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 200),
@@ -181,13 +185,13 @@ class _FullscreenLedScreenState extends State<FullscreenLedScreen> {
             ),
 
             // Top Exit Button
-            IgnorePointer(
-              ignoring: !_showHud,
-              child: AnimatedPositioned(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeInOut,
-                top: _showHud ? 20 : -80,
-                left: 20,
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              top: _showHud ? 20 : -80,
+              left: 20,
+              child: IgnorePointer(
+                ignoring: !_showHud,
                 child: AnimatedOpacity(
                   opacity: _showHud ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 200),
