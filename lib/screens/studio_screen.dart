@@ -234,12 +234,16 @@ class _StudioScreenState extends State<StudioScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14.0),
+        clipBehavior: Clip.hardEdge,
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            LedDisplayWidget(
-              config: _config,
-              isFullScreen: false,
-              onTap: _openFullscreen,
+            Positioned.fill(
+              child: LedDisplayWidget(
+                config: _config,
+                isFullScreen: false,
+                onTap: _openFullscreen,
+              ),
             ),
             Positioned(
               top: 6,
@@ -559,7 +563,7 @@ class _StudioScreenState extends State<StudioScreen> {
               style: TextStyle(color: Colors.white54, fontSize: 12),
             ),
             value: _config.isRainbow,
-            activeColor: const Color(0xFF00FF66),
+            activeTrackColor: const Color(0xFF00FF66),
             onChanged: (val) {
               _updateConfig(_config.copyWith(isRainbow: val));
             },
@@ -676,7 +680,7 @@ class _StudioScreenState extends State<StudioScreen> {
               style: TextStyle(color: Colors.white54, fontSize: 12),
             ),
             value: _config.isMirrored,
-            activeColor: _config.textColor,
+            activeTrackColor: _config.textColor,
             onChanged: (val) {
               _updateConfig(_config.copyWith(isMirrored: val));
             },

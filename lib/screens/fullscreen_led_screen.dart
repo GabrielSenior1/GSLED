@@ -124,8 +124,9 @@ class _FullscreenLedScreenState extends State<FullscreenLedScreen> {
       child: Scaffold(
         backgroundColor: _config.backgroundColor,
         body: Stack(
+          clipBehavior: Clip.none,
           children: [
-            // Core LED Marquee Display
+            // Core LED Marquee Display — fills entire screen
             Positioned.fill(
               child: LedDisplayWidget(
                 config: _config,
@@ -163,28 +164,42 @@ class _FullscreenLedScreenState extends State<FullscreenLedScreen> {
               ),
 
             // Floating Controls HUD
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              bottom: _showHud ? 20 : -140,
-              left: 20,
-              right: 20,
-              child: _buildControlsHud(),
+            IgnorePointer(
+              ignoring: !_showHud,
+              child: AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                bottom: _showHud ? 20 : -140,
+                left: 20,
+                right: 20,
+                child: AnimatedOpacity(
+                  opacity: _showHud ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: _buildControlsHud(),
+                ),
+              ),
             ),
 
             // Top Exit Button
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              top: _showHud ? 20 : -80,
-              left: 20,
-              child: FloatingActionButton.small(
-                heroTag: 'exit_btn',
-                backgroundColor: Colors.black.withValues(alpha: 0.75),
-                foregroundColor: Colors.white,
-                shape: const CircleBorder(side: BorderSide(color: Colors.white30)),
-                onPressed: _exit,
-                child: const Icon(Icons.arrow_back),
+            IgnorePointer(
+              ignoring: !_showHud,
+              child: AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                top: _showHud ? 20 : -80,
+                left: 20,
+                child: AnimatedOpacity(
+                  opacity: _showHud ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: FloatingActionButton.small(
+                    heroTag: 'exit_btn',
+                    backgroundColor: Colors.black.withValues(alpha: 0.75),
+                    foregroundColor: Colors.white,
+                    shape: const CircleBorder(side: BorderSide(color: Colors.white30)),
+                    onPressed: _exit,
+                    child: const Icon(Icons.arrow_back),
+                  ),
+                ),
               ),
             ),
           ],
