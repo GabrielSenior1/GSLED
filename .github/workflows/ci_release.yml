@@ -23,8 +23,10 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.29.3'
           cache: true
       - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - run: flutter test
       - run: flutter build apk --release
       - run: flutter build appbundle --release
@@ -52,8 +54,10 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.29.3'
           cache: true
       - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - run: flutter test
       - run: flutter build ios --release --no-codesign
       - name: Package unsigned IPA
