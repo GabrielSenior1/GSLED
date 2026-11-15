@@ -1,0 +1,96 @@
+name: Build All & Release (Android + iOS)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Rename APK for release
+        run: cp build/app/outputs/flutter-apk/app-release.apk letrero-led-android.apk
+
+      - name: Cache Android artifacts for release job
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-binaries
+          path: |
+            letrero-led-android.apk
+            build/app/outputs/bundle/release/app-release.aab
+
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter build ios --release --no-codesign
+      - name: Package unsigned IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r ../../../letrero-led-ios-unsigned.ipa Payload
+          cd ../../..
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-ipa
+          path: letrero-led-ios-unsigned.ipa
+
+  create-github-release:
+    name: Publish GitHub Release
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-binaries
+          path: ./release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-release-ipa
+          path: ./release-assets
+
+      - name: Create GitHub Release with Binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/letrero-led-android.apk
+            release-assets/app-release.aab
+            release-assets/letrero-led-ios-unsigned.ipa
+          draft: false
+          prerelease: false
+          generate_release_notes: true

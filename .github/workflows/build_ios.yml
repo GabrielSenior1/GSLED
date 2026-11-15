@@ -1,0 +1,58 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS (No Codesign / Sideload Ready)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze code
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build iOS Application (Release, Unsigned)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package unsigned IPA for sideloading & testing
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r ../../../LetreroLED-iOS-unsigned.ipa Payload
+          zip -r ../../../LetreroLED-Runner.app.zip Runner.app
+          cd ../../..
+
+      - name: Upload Unsigned IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: letrero-led-ios-ipa
+          path: LetreroLED-iOS-unsigned.ipa
+          retention-days: 30
+
+      - name: Upload Runner.app ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: letrero-led-ios-app-zip
+          path: LetreroLED-Runner.app.zip
+          retention-days: 30
